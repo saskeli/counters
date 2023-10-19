@@ -1,0 +1,4 @@
+
+
+test: test.cpp counter.hpp
+	g++ -std=c++2a -Ofast -march=native -o test test.cpp
