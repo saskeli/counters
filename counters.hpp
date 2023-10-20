@@ -49,6 +49,9 @@ class Counters {
         if (group_fd == -1) {
             std::cerr << "Error creating group leader (instruction counter)" << std::endl;
             std::cerr << err << ": " << strerror(err) << std::endl;
+            if (pe_ins.size != sizeof(perf_event_attr)) {
+                std::cout << pe_ins.size << " != " << sizeof(perf_event_attr) << std::endl;
+            }
             exit(1);
         }
         err = read(group_fd, &counter_data, sizeof(read_format));
