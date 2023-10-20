@@ -67,7 +67,7 @@ class Counters {
         perf_event_attr pe_l1dm;
         pe_l1dm.type = PERF_TYPE_HW_CACHE;
         pe_l1dm.size = sizeof(perf_event_attr);
-        pe_l1dm.config1 = PERF_COUNT_HW_CACHE_L1D | PERF_COUNT_HW_CACHE_OP_READ | PERF_COUNT_HW_CACHE_RESULT_MISS;
+        pe_l1dm.config1 = int(PERF_COUNT_HW_CACHE_L1D) | int(PERF_COUNT_HW_CACHE_OP_READ) | int(PERF_COUNT_HW_CACHE_RESULT_MISS);
         pe_l1dm.exclude_kernel = true;
         pe_l1dm.exclude_hv = true;
         // More options? and submit to group?
@@ -99,7 +99,7 @@ class Counters {
             exit(1);
         }
         perf_event_mmap_page* mm_p = reinterpret_cast<perf_event_mmap_page*>(mm_fd);
-
+        std::cout << mm_p->time_cycles << std::endl;
         munmap(mm_fd, mm_size);
     }
 /*
