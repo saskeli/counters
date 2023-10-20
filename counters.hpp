@@ -47,7 +47,12 @@ class Counters {
             std::cerr << errno << ": " << strerror(errno) << std::endl;
             exit(1);
         }
-        read(group_fd, &counter_data, sizeof(read_format));
+        int err = read(group_fd, &counter_data, sizeof(read_format));
+        if (err == -1) {
+            std::cerr << "Error reading counter data from group leader" << std::endl;
+            std::cerr << errno << ": " << strerror(errno) << std::endl;
+            exit(1);
+        }
         //Retrieve group id from cyc_fd?
 
         perf_event_attr pe_bm;
@@ -78,7 +83,7 @@ class Counters {
             exit(1);
         }
 
-        int err = ioctl(group_fd, PERF_EVENT_IOC_RESET, 0);
+        err = ioctl(group_fd, PERF_EVENT_IOC_RESET, 0);
         if (err < 0) {
             std::cerr << "Error resetting counters for init" << std::endl;
             std::cerr << errno << ": " << strerror(errno) << std::endl;
