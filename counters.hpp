@@ -37,9 +37,6 @@ class Counters {
         pe_ins.config = PERF_COUNT_HW_INSTRUCTIONS;
         pe_ins.exclude_kernel = true;
         pe_ins.exclude_hv = true;
-        pe_ins.exclude_callchain_kernel = true;
-        pe_ins.exclude_host = true;
-        pe_ins.exclude_idle = true;
         pe_ins.read_format = PERF_FORMAT_ID | PERF_FORMAT_GROUP;
         pe_ins.disabled = true;
         pe_ins.pinned = true;
