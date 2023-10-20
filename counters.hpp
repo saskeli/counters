@@ -41,7 +41,7 @@ class Counters {
         pe_ins.disabled = true;
         pe_ins.pinned = true;
         //More options?
-        group_fd = syscall(SYS_perf_event_open, pe_ins, 0, -1, -1, 0);
+        group_fd = syscall(SYS_perf_event_open, &pe_ins, 0, -1, -1, 0);
         if (group_fd == -1) {
             std::cerr << "Error creating group leader (instruction counter)" << std::endl;
             std::cerr << errno << ": " << strerror(errno) << std::endl;
@@ -57,7 +57,7 @@ class Counters {
         pe_bm.exclude_kernel = true;
         pe_bm.exclude_hv = true;
         //More options and sumit to group?
-        bm_fd = syscall(SYS_perf_event_open, pe_bm, 0, -1, counter_data.values[0].id, 0);
+        bm_fd = syscall(SYS_perf_event_open, &pe_bm, 0, -1, counter_data.values[0].id, 0);
         if (bm_fd == -1) {
             std::cerr << "Error creating branch misprediction counter" << std::endl;
             std::cerr << errno << ": " << strerror(errno) << std::endl;
@@ -71,7 +71,7 @@ class Counters {
         pe_l1dm.exclude_kernel = true;
         pe_l1dm.exclude_hv = true;
         // More options? and submit to group?
-        l1dm_fd = syscall(SYS_perf_event_open, pe_l1dm, 0, -1, counter_data.values[0].id, 0);
+        l1dm_fd = syscall(SYS_perf_event_open, &pe_l1dm, 0, -1, counter_data.values[0].id, 0);
         if (l1dm_fd == -1) {
             std::cerr << "Error creating L1D miss counter" << std::endl;
             std::cerr << errno << ": " << strerror(errno) << std::endl;
