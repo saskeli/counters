@@ -43,14 +43,16 @@ class Counters {
         //More options?
         group_fd = syscall(SYS_perf_event_open, &pe_ins, 0, -1, -1, 0);
         if (group_fd == -1) {
+            group_fd = errno;
             std::cerr << "Error creating group leader (instruction counter)" << std::endl;
-            std::cerr << errno << ": " << strerror(errno) << std::endl;
+            std::cerr << group_fd << ": " << strerror(group_fd) << std::endl;
             exit(1);
         }
         int err = read(group_fd, &counter_data, sizeof(read_format));
         if (err == -1) {
+            err = errno;
             std::cerr << "Error reading counter data from group leader" << std::endl;
-            std::cerr << errno << ": " << strerror(errno) << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
         //Retrieve group id from cyc_fd?
@@ -64,8 +66,9 @@ class Counters {
         //More options and sumit to group?
         bm_fd = syscall(SYS_perf_event_open, &pe_bm, 0, -1, counter_data.values[0].id, 0);
         if (bm_fd == -1) {
+            err = errno;
             std::cerr << "Error creating branch misprediction counter" << std::endl;
-            std::cerr << errno << ": " << strerror(errno) << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
 
@@ -78,29 +81,33 @@ class Counters {
         // More options? and submit to group?
         l1dm_fd = syscall(SYS_perf_event_open, &pe_l1dm, 0, -1, counter_data.values[0].id, 0);
         if (l1dm_fd == -1) {
+            err = errno;
             std::cerr << "Error creating L1D miss counter" << std::endl;
-            std::cerr << errno << ": " << strerror(errno) << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
 
         err = ioctl(group_fd, PERF_EVENT_IOC_RESET, 0);
         if (err < 0) {
+            err = errno;
             std::cerr << "Error resetting counters for init" << std::endl;
-            std::cerr << errno << ": " << strerror(errno) << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
         err = ioctl(group_fd, PERF_EVENT_IOC_ENABLE, 0);
         if (err < 0) {
+            err = errno;
             std::cerr << "Error enabling counter group" << std::endl;
-            std::cerr << errno << ": " << strerror(errno) << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
 
         uint32_t mm_size = (1 + (1u << num_counters_)) * sizeof(perf_event_mmap_page);
         char* mm_fd = (char*)mmap(NULL, mm_size, PROT_READ, MAP_PRIVATE, group_fd, 0);
         if (mm_fd == MAP_FAILED) {
+            err = errno;
             std::cerr << "Error mapping perf event pages" << std::endl;
-            std::cerr << errno << ": " << strerror(errno) << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
         perf_event_mmap_page* mm_p = reinterpret_cast<perf_event_mmap_page*>(mm_fd);
