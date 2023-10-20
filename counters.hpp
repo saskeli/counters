@@ -37,18 +37,21 @@ class Counters {
         pe_ins.config = PERF_COUNT_HW_INSTRUCTIONS;
         pe_ins.exclude_kernel = true;
         pe_ins.exclude_hv = true;
+        pe_ins.exclude_callchain_kernel = true;
+        pe_ins.exclude_host = true;
+        pe_ins.exclude_idle = true;
         pe_ins.read_format = PERF_FORMAT_ID | PERF_FORMAT_GROUP;
         pe_ins.disabled = true;
         pe_ins.pinned = true;
         //More options?
         group_fd = syscall(SYS_perf_event_open, &pe_ins, 0, -1, -1, 0);
+        int err = errno;
         if (group_fd == -1) {
-            group_fd = errno;
             std::cerr << "Error creating group leader (instruction counter)" << std::endl;
-            std::cerr << group_fd << ": " << strerror(group_fd) << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
-        int err = read(group_fd, &counter_data, sizeof(read_format));
+        err = read(group_fd, &counter_data, sizeof(read_format));
         if (err == -1) {
             err = errno;
             std::cerr << "Error reading counter data from group leader" << std::endl;
