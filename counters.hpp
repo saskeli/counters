@@ -27,7 +27,7 @@ class Counters {
         struct {
             uint64_t value;     /* The value of the event */
             uint64_t id;        /* if PERF_FORMAT_ID */
-        } values[num_counters_];
+        } values[num_counters_ - 1];
     } counter_data;
 
     public:
@@ -109,7 +109,10 @@ class Counters {
             exit(1);
         }
 
-        read(group_fd, &counter_data, sizeof(read_format));
+        auto r = read(group_fd, &counter_data, sizeof(read_format));
+        if (r != sizeof(read_format)) {
+            std::cerr << "unexpected read size " << r << " <-> " << sizeof(read_format) << std::endl;
+        }
         std::cerr << counter_data.nr << ", " << counter_data.time_enabled << ", " << counter_data.time_running << std::endl;
         for (size_t i = 0; i < counter_data.nr; ++i) {
             std::cerr << counter_data.values[i].value << ", " << counter_data.values[i].id << std::endl;
