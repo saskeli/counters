@@ -8,6 +8,7 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <iomanip>
 
 template <uint16_t sections>
 class Counters {
@@ -32,6 +33,7 @@ class Counters {
     public:
     Counters() : base_counts_(), section_cumulatives_() {
         perf_event_attr pe_ins;
+        memset(&pe_ins, 0, sizeof(perf_event_attr));
         pe_ins.type = PERF_TYPE_HARDWARE;
         pe_ins.size = sizeof(perf_event_attr);
         pe_ins.config = PERF_COUNT_HW_INSTRUCTIONS;
@@ -56,18 +58,20 @@ class Counters {
             err = errno;
             std::cerr << "Error reading counter data from group leader" << std::endl;
             std::cerr << err << ": " << strerror(err) << std::endl;
+            ioctl(group_fd, PERF_EVENT_IOC_DISABLE, 0);
+            close(group_fd);
             exit(1);
         }
         //Retrieve group id from cyc_fd?
 
         perf_event_attr pe_bm;
+        memset(&pe_bm, 0, sizeof(perf_event_attr));
         pe_bm.type = PERF_TYPE_HARDWARE;
         pe_bm.size = sizeof(perf_event_attr);
-        pe_bm.config = PERF_COUNT_HW_BRANCH_MISSES;
+        pe_bm.config = PERF_COUNT_HW_CACHE_MISSES;
         pe_bm.exclude_kernel = true;
         pe_bm.exclude_hv = true;
-        //More options and sumit to group?
-        bm_fd = syscall(SYS_perf_event_open, &pe_bm, 0, -1, counter_data.values[0].id, 0);
+        bm_fd = syscall(SYS_perf_event_open, &pe_bm, 0, -1, group_fd, 0);
         if (bm_fd == -1) {
             err = errno;
             std::cerr << "Error creating branch misprediction counter" << std::endl;
@@ -76,13 +80,13 @@ class Counters {
         }
 
         perf_event_attr pe_l1dm;
-        pe_l1dm.type = PERF_TYPE_HW_CACHE;
+        memset(&pe_l1dm, 0, sizeof(perf_event_attr));
+        pe_l1dm.type = PERF_TYPE_HARDWARE;
         pe_l1dm.size = sizeof(perf_event_attr);
-        pe_l1dm.config1 = int(PERF_COUNT_HW_CACHE_L1D) | int(PERF_COUNT_HW_CACHE_OP_READ) | int(PERF_COUNT_HW_CACHE_RESULT_MISS);
+        pe_l1dm.config1 = PERF_COUNT_HW_BRANCH_MISSES;
         pe_l1dm.exclude_kernel = true;
         pe_l1dm.exclude_hv = true;
-        // More options? and submit to group?
-        l1dm_fd = syscall(SYS_perf_event_open, &pe_l1dm, 0, -1, counter_data.values[0].id, 0);
+        l1dm_fd = syscall(SYS_perf_event_open, &pe_l1dm, 0, -1, group_fd, 0);
         if (l1dm_fd == -1) {
             err = errno;
             std::cerr << "Error creating L1D miss counter" << std::endl;
@@ -105,31 +109,44 @@ class Counters {
             exit(1);
         }
 
-        uint32_t mm_size = (1 + (1u << num_counters_)) * sizeof(perf_event_mmap_page);
-        char* mm_fd = (char*)mmap(NULL, mm_size, PROT_READ, MAP_PRIVATE, group_fd, 0);
-        if (mm_fd == MAP_FAILED) {
-            err = errno;
-            std::cerr << "Error mapping perf event pages" << std::endl;
-            std::cerr << err << ": " << strerror(err) << std::endl;
-            exit(1);
+        read(group_fd, &counter_data, sizeof(read_format));
+        std::cerr << counter_data.nr << ", " << counter_data.time_enabled << ", " << counter_data.time_running << std::endl;
+        for (size_t i = 0; i < counter_data.nr; ++i) {
+            std::cerr << counter_data.values[i].value << ", " << counter_data.values[i].id << std::endl;
         }
-        perf_event_mmap_page* mm_p = reinterpret_cast<perf_event_mmap_page*>(mm_fd);
-        std::cout << mm_p->time_cycles << std::endl;
-        munmap(mm_fd, mm_size);
-    }
-/*
-    reset() {
+        inst_id = counter_data.values[0].id;
+        bm_id = counter_data.values[1].id;
+        l1dm_id = counter_data.values[2].id;
         base_counts_[0] = __builtin_ia32_rdtsc();
-        int id = 1; //?
-        base_counts_[1] = __builtin_ia32_rdpmc(id);
-        id = 2;
-        base_counts_[2] = __builtin_ia32_rdpmc(id);
-        id = 3;
-        base_counts_[3] = __builtin_ia32_rdpmc(id);
+        base_counts_[1] = __builtin_ia32_rdpmc(inst_id);
+        base_counts_[2] = __builtin_ia32_rdpmc(bm_id);
+        base_counts_[3] = __builtin_ia32_rdpmc(l1dm_id);
     }
-*/
+
+    void reset() {
+        base_counts_[0] = __builtin_ia32_rdtsc();
+        base_counts_[1] = __builtin_ia32_rdpmc(inst_id);
+        base_counts_[2] = __builtin_ia32_rdpmc(bm_id);
+        base_counts_[3] = __builtin_ia32_rdpmc(l1dm_id);
+    }
+
+    const std::array<uint64_t, num_counters_>& accumulate(uint16_t i) {
+        uint64_t c = __builtin_ia32_rdtsc();
+        section_cumulatives_[i][0] = c - base_counts_[0];
+        base_counts_[0] = c;
+        c = __builtin_ia32_rdpmc(inst_id);
+        section_cumulatives_[i][1] = c - base_counts_[1];
+        base_counts_[1] = c;
+        c = __builtin_ia32_rdpmc(bm_id);
+        section_cumulatives_[i][2] = c - base_counts_[2];
+        base_counts_[2] = c;
+        c = __builtin_ia32_rdpmc(l1dm_id);
+        section_cumulatives_[i][3] = c - base_counts_[3];
+        base_counts_[3] = c;
+        return section_cumulatives_[i];
+    }
+
     ~Counters() {
-        
         ioctl(group_fd, PERF_EVENT_IOC_DISABLE, 0);
         close(group_fd);
         close(bm_fd);
