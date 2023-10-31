@@ -1,10 +1,12 @@
 #include <linux/perf_event.h>
 #include <sys/syscall.h>
 #include <sys/prctl.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#include <x86intrin.h>
 
 #include <array>
 #include <cstdint>
@@ -19,7 +21,7 @@ class Counters {
     std::array<std::array<uint64_t, num_counters_>, sections>
         section_cumulatives_;
     int group_fd, bm_fd, l1dm_fd;
-    uint32_t inst_id, bm_id, l1dm_id;
+    uint32_t pmc_id[3];
 
     struct read_format {
         uint64_t nr;            /* The number of events */
@@ -80,8 +82,8 @@ class Counters {
             }
             exit(1);
         }
+
         base_counts_[0] = __builtin_ia32_rdtsc();
-        
         err = prctl(PR_TASK_PERF_EVENTS_ENABLE);
         if (err < 0) {
             err = errno;
@@ -89,37 +91,32 @@ class Counters {
             std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
+        ioctl(group_fd, PERF_EVENT_IOC_ID, pmc_id);
+        ioctl(bm_fd, PERF_EVENT_IOC_ID, pmc_id + 1);
+        ioctl(l1dm_fd, PERF_EVENT_IOC_ID, pmc_id + 2);
+        std::cout << pmc_id[0] << ", " << pmc_id[1] << ", " << pmc_id[2] << std::endl;
         std::cerr << "counters initialized and running" << std::endl;
     }
 
     void reset() {
-        base_counts_[0] = __builtin_ia32_rdtsc();
-        auto r = read(group_fd, &counter_data, sizeof(read_format));
-        if (r != sizeof(read_format)) [[unlikely]] {
-            int err = errno;
-            std::cerr << "unexpected read size " << r << " <-> " << sizeof(read_format) << std::endl;
-            if (r == -1) {
-                std::cerr << "Error " << err << " -> " << strerror(err) << std::endl;
-            }
-            exit(1);
-        }
-        for (size_t i = 0; i < num_counters_ - 1; ++i) {
-            base_counts_[i + 1] = counter_data.values[i].value;
-        }
+        base_counts_[0] = __rdtsc();
+        base_counts_[1] = __rdpmc(pmc_id[0]);
+        base_counts_[2] = __rdpmc(pmc_id[1]);
+        base_counts_[3] = __rdpmc(pmc_id[2]);
     }
 
     const std::array<uint64_t, num_counters_>& accumulate(uint16_t i) {
-        uint64_t c = __builtin_ia32_rdtsc();
+        uint64_t c = __rdtsc();
         section_cumulatives_[i][0] = c - base_counts_[0];
         base_counts_[0] = c;
-        auto r = read(group_fd, &counter_data, sizeof(read_format));
-        if (r != sizeof(read_format)) [[unlikely]] {
-            std::cerr << "unexpected read size " << r << " <-> " << sizeof(read_format) << std::endl;
-        }
-        for (size_t ii = 0; ii < num_counters_ - 1; ++ii) {
-            section_cumulatives_[i][ii + 1] = counter_data.values[ii].value;
-            base_counts_[ii + 1] = counter_data.values[ii].value;
-        }
+        c = __rdpmc(pmc_id[0]);
+        section_cumulatives_[i][1] = c - base_counts_[1];
+        base_counts_[1] = c;
+        c = __rdpmc(pmc_id[1]);
+        section_cumulatives_[i][2] = c - base_counts_[2];
+        base_counts_[2] = c;
+        c = __rdpmc(pmc_id[2]);
+        section_cumulatives_[i][3] = c - base_counts_[3];
         return section_cumulatives_[i];
     }
 
