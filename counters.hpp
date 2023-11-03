@@ -91,10 +91,16 @@ class Counters {
             std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
-        ioctl(group_fd, PERF_EVENT_IOC_ID, pmc_id);
-        ioctl(bm_fd, PERF_EVENT_IOC_ID, pmc_id + 1);
-        ioctl(l1dm_fd, PERF_EVENT_IOC_ID, pmc_id + 2);
-        std::cout << pmc_id[0] << ", " << pmc_id[1] << ", " << pmc_id[2] << std::endl;
+
+        struct perf_event_mmap_page* perf_mm;
+        perf_mm = (perf_event_mmap_page*)mmap(NULL, 4096, PROT_READ, MAP_SHARED, group_fd, 0);
+        if (perf_mm == MAP_FAILED) {
+            err = errno;
+            std::cerr << "mmap error" << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
+            exit(1);
+        }
+        std::cerr << perf_mm->cap_user_rdpmc << " cap_user_rdpmc " << perf_mm-> << std::endl;
         std::cerr << "counters initialized and running" << std::endl;
     }
 
@@ -117,6 +123,7 @@ class Counters {
         base_counts_[2] = c;
         c = __rdpmc(pmc_id[2]);
         section_cumulatives_[i][3] = c - base_counts_[3];
+        base_counts_[3] = c;
         return section_cumulatives_[i];
     }
 
