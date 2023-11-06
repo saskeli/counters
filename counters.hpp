@@ -31,6 +31,36 @@ class Counters {
         } values[num_counters_ - 1];
     } counter_data;
 
+    static uint32_t mmap_id(int fd, const std::string& counter_name) {
+        struct perf_event_mmap_page* perf_mm;
+        const constexpr MMAP_SIZE = 4096;
+        int err;
+        perf_mm = (perf_event_mmap_page*)mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, group_fd, 0);
+        if (perf_mm == MAP_FAILED) {
+            err = errno;
+            std::cerr << "mmap error for " << counter_name << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
+            exit(1);
+        }
+        if (perf_mm->cap_user_rdpmc == 0) {
+            std::cerr << "missing rdpmc support for " << counter_name << std::endl;
+            exit(1);
+        }
+        uint32_t r = perf_mm->index;
+        if (r == 0) {
+            std::cerr << "invalid rdpmc id for " << counter_name << std::endl;
+            exit(1);
+        }
+        err = munmap(perf_mm, MMAP_SIZE);
+        if (err != 0) {
+            err = errno:
+            std::cerr << "munmap failed for " << counter_name << std::endl;
+            std::cerr << err << ": " << strerror(err) << std::endl;
+            exit(1);
+        }
+        return r - 1;
+    }
+
     public:
     Counters() : base_counts_(), section_cumulatives_() {
         perf_event_attr pe;
@@ -73,17 +103,6 @@ class Counters {
             exit(1);
         }
 
-        auto r = read(group_fd, &counter_data, sizeof(read_format));
-        if (r != sizeof(read_format)) {
-            err = errno;
-            std::cerr << "unexpected initial read size " << r << " <-> " << sizeof(read_format) << std::endl;
-            if (r == -1) {
-                std::cerr << "Error " << err << " -> " << strerror(err) << std::endl;
-            }
-            exit(1);
-        }
-
-        base_counts_[0] = __builtin_ia32_rdtsc();
         err = prctl(PR_TASK_PERF_EVENTS_ENABLE);
         if (err < 0) {
             err = errno;
@@ -92,16 +111,11 @@ class Counters {
             exit(1);
         }
 
-        struct perf_event_mmap_page* perf_mm;
-        perf_mm = (perf_event_mmap_page*)mmap(NULL, 4096, PROT_READ, MAP_SHARED, group_fd, 0);
-        if (perf_mm == MAP_FAILED) {
-            err = errno;
-            std::cerr << "mmap error" << std::endl;
-            std::cerr << err << ": " << strerror(err) << std::endl;
-            exit(1);
-        }
-        std::cerr << perf_mm->cap_user_rdpmc << " cap_user_rdpmc " << perf_mm-> << std::endl;
+        pmc_id[0] = mmap_id(group_fd, "group leader (instruction counter)");
+        pmc_id[1] = mmap_id(bm_fd, "branch missprediction counter");
+        pmc_id[2] = mmap_id(l1dm_fd, "cache miss counter");
         std::cerr << "counters initialized and running" << std::endl;
+        reset();
     }
 
     void reset() {
