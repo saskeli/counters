@@ -112,10 +112,15 @@ class Counters {
     }
 
     void reset() {
+        std::cerr << "reset __rdtsc" << std::endl;
         base_counts_[0] = __rdtsc();
+        std::cerr << " -> " << base_counts_[0] << "\nrdpmc(" << pmc_id[0] << ")" << std::endl;
         base_counts_[1] = __rdpmc(pmc_id[0]);
+        std::cerr << " -> " << base_counts_[1] << "\nrdpmc(" << pmc_id[1] << ")" << std::endl;
         base_counts_[2] = __rdpmc(pmc_id[1]);
+        std::cerr << " -> " << base_counts_[2] << "\nrdpmc(" << pmc_id[2] << ")" << std::endl;
         base_counts_[3] = __rdpmc(pmc_id[2]);
+        std::cerr << " -> " << base_counts_[3] << "\nDone!" << std::endl;
     }
 
     const std::array<uint64_t, num_counters_>& accumulate(uint16_t i) {
