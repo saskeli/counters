@@ -38,6 +38,9 @@ class Counters {
             std::cerr << "missing rdpmc support for " << counter_name << std::endl;
             exit(1);
         }
+
+        std::cerr << counter_name << " pmc width: " << perf_mm->pmc_width << ", index: " << perf_mm->index << std::endl;
+
         uint32_t r = perf_mm->index;
         if (r == 0) {
             std::cerr << "invalid rdpmc id for " << counter_name << std::endl;
