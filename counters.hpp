@@ -33,9 +33,9 @@ class Counters {
 
     static uint32_t mmap_id(int fd, const std::string& counter_name) {
         struct perf_event_mmap_page* perf_mm;
-        const constexpr MMAP_SIZE = 4096;
+        const constexpr uint32_t MMAP_SIZE = 4096;
         int err;
-        perf_mm = (perf_event_mmap_page*)mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, group_fd, 0);
+        perf_mm = (perf_event_mmap_page*)mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, fd, 0);
         if (perf_mm == MAP_FAILED) {
             err = errno;
             std::cerr << "mmap error for " << counter_name << std::endl;
@@ -53,7 +53,7 @@ class Counters {
         }
         err = munmap(perf_mm, MMAP_SIZE);
         if (err != 0) {
-            err = errno:
+            err = errno;
             std::cerr << "munmap failed for " << counter_name << std::endl;
             std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
