@@ -1,17 +1,17 @@
+#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/syscall.h>
-#include <sys/prctl.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/prctl.h>
+#include <sys/syscall.h>
 #include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
 #include <x86intrin.h>
 
 #include <array>
 #include <cstdint>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 
 template <uint16_t sections>
 class Counters {
@@ -25,9 +25,11 @@ class Counters {
     int group_fd, bm_fd, l1dm_fd;
     uint32_t pmc_id[3];
 
-    uint32_t mmap_id(int fd, const std::string& counter_name, uint32_t pemmap_index) {
+    uint32_t mmap_id(int fd, const std::string& counter_name,
+                     uint32_t pemmap_index) {
         int err;
-        mmaps[pemmap_index] = (perf_event_mmap_page*)mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+        mmaps[pemmap_index] = (perf_event_mmap_page*)mmap(
+            NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, fd, 0);
         if (mmaps[pemmap_index] == MAP_FAILED) {
             err = errno;
             std::cerr << "mmap error for " << counter_name << std::endl;
@@ -35,28 +37,24 @@ class Counters {
             exit(1);
         }
         if (mmaps[pemmap_index]->cap_user_rdpmc == 0) {
-            std::cerr << "missing rdpmc support for " << counter_name << std::endl;
+            std::cerr << "missing rdpmc support for " << counter_name
+                      << std::endl;
             exit(1);
         }
 
-        std::cerr << counter_name << " pmc width: " << mmaps[pemmap_index]->pmc_width << ", index: " << mmaps[pemmap_index]->index << std::endl;
+        // std::cerr << counter_name << " pmc width: " <<
+        //              mmaps[pemmap_index]->pmc_width << ", index: " <<
+        //              mmaps[pemmap_index]->index << std::endl;
 
         uint32_t r = mmaps[pemmap_index]->index;
         if (r == 0) {
             std::cerr << "invalid rdpmc id for " << counter_name << std::endl;
             exit(1);
         }
-        /*err = munmap(mmaps[pemmap_index], MMAP_SIZE);
-        if (err != 0) {
-            err = errno;
-            std::cerr << "munmap failed for " << counter_name << std::endl;
-            std::cerr << err << ": " << strerror(err) << std::endl;
-            exit(1);
-        }*/
         return r - 1;
     }
 
-    public:
+   public:
     Counters() : base_counts_(), section_cumulatives_() {
         perf_event_attr pe;
         memset(&pe, 0, sizeof(perf_event_attr));
@@ -70,10 +68,12 @@ class Counters {
         group_fd = syscall(SYS_perf_event_open, &pe, 0, -1, -1, 0);
         int err = errno;
         if (group_fd == -1) {
-            std::cerr << "Error creating group leader (instruction counter)" << std::endl;
+            std::cerr << "Error creating group leader (instruction counter)"
+                      << std::endl;
             std::cerr << err << ": " << strerror(err) << std::endl;
             if (pe.size != sizeof(perf_event_attr)) {
-                std::cout << pe.size << " != " << sizeof(perf_event_attr) << std::endl;
+                std::cout << pe.size << " != " << sizeof(perf_event_attr)
+                          << std::endl;
             }
             exit(1);
         }
@@ -83,7 +83,8 @@ class Counters {
         bm_fd = syscall(SYS_perf_event_open, &pe, 0, -1, group_fd, 0);
         if (bm_fd == -1) {
             err = errno;
-            std::cerr << "Error creating branch misprediction counter" << std::endl;
+            std::cerr << "Error creating branch misprediction counter"
+                      << std::endl;
             std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
