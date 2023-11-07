@@ -17,42 +17,42 @@ template <uint16_t sections>
 class Counters {
    private:
     static const constexpr uint16_t num_counters_ = 4;
+    static const constexpr uint32_t MMAP_SIZE = 4096;
+    perf_event_mmap_page* mmaps[3];
     std::array<uint64_t, num_counters_> base_counts_;
     std::array<std::array<uint64_t, num_counters_>, sections>
         section_cumulatives_;
     int group_fd, bm_fd, l1dm_fd;
     uint32_t pmc_id[3];
 
-    static uint32_t mmap_id(int fd, const std::string& counter_name) {
-        struct perf_event_mmap_page* perf_mm;
-        const constexpr uint32_t MMAP_SIZE = 4096;
+    uint32_t mmap_id(int fd, const std::string& counter_name, uint32_t pemmap_index) {
         int err;
-        perf_mm = (perf_event_mmap_page*)mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, fd, 0);
-        if (perf_mm == MAP_FAILED) {
+        mmaps[pemmap_index] = (perf_event_mmap_page*)mmap(NULL, MMAP_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+        if (mmaps[pemmap_index] == MAP_FAILED) {
             err = errno;
             std::cerr << "mmap error for " << counter_name << std::endl;
             std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
         }
-        if (perf_mm->cap_user_rdpmc == 0) {
+        if (mmaps[pemmap_index]->cap_user_rdpmc == 0) {
             std::cerr << "missing rdpmc support for " << counter_name << std::endl;
             exit(1);
         }
 
-        std::cerr << counter_name << " pmc width: " << perf_mm->pmc_width << ", index: " << perf_mm->index << std::endl;
+        std::cerr << counter_name << " pmc width: " << mmaps[pemmap_index]->pmc_width << ", index: " << mmaps[pemmap_index]->index << std::endl;
 
-        uint32_t r = perf_mm->index;
+        uint32_t r = mmaps[pemmap_index]->index;
         if (r == 0) {
             std::cerr << "invalid rdpmc id for " << counter_name << std::endl;
             exit(1);
         }
-        err = munmap(perf_mm, MMAP_SIZE);
+        /*err = munmap(mmaps[pemmap_index], MMAP_SIZE);
         if (err != 0) {
             err = errno;
             std::cerr << "munmap failed for " << counter_name << std::endl;
             std::cerr << err << ": " << strerror(err) << std::endl;
             exit(1);
-        }
+        }*/
         return r - 1;
     }
 
@@ -106,9 +106,9 @@ class Counters {
             exit(1);
         }
 
-        pmc_id[0] = mmap_id(group_fd, "group leader (instruction counter)");
-        pmc_id[1] = mmap_id(bm_fd, "branch missprediction counter");
-        pmc_id[2] = mmap_id(l1dm_fd, "cache miss counter");
+        pmc_id[0] = mmap_id(group_fd, "group leader (instruction counter)", 0);
+        pmc_id[1] = mmap_id(bm_fd, "branch missprediction counter", 1);
+        pmc_id[2] = mmap_id(l1dm_fd, "cache miss counter", 2);
         std::cerr << "counters initialized and running" << std::endl;
         std::cerr << " counter ids: " << pmc_id[0] << ", " << pmc_id[1] << ", " << pmc_id[2] << std::endl;
         reset();
@@ -117,11 +117,11 @@ class Counters {
     void reset() {
         std::cerr << "reset __rdtsc" << std::endl;
         base_counts_[0] = __rdtsc();
-        std::cerr << " -> " << base_counts_[0] << "\nrdpmc(" << pmc_id[0] << ")" << std::endl;
+        std::cerr << " -> " << base_counts_[0] << "\nrdpmc(" << pmc_id[0] << ", " << mmaps[0]->index << ")" << std::endl;
         base_counts_[1] = __rdpmc(pmc_id[0]);
-        std::cerr << " -> " << base_counts_[1] << "\nrdpmc(" << pmc_id[1] << ")" << std::endl;
+        std::cerr << " -> " << base_counts_[1] << "\nrdpmc(" << pmc_id[1] << ", " << mmaps[1]->index << ")" << std::endl;
         base_counts_[2] = __rdpmc(pmc_id[1]);
-        std::cerr << " -> " << base_counts_[2] << "\nrdpmc(" << pmc_id[2] << ")" << std::endl;
+        std::cerr << " -> " << base_counts_[2] << "\nrdpmc(" << pmc_id[2] << ", " << mmaps[2]->index << ")" << std::endl;
         base_counts_[3] = __rdpmc(pmc_id[2]);
         std::cerr << " -> " << base_counts_[3] << "\nDone!" << std::endl;
     }
@@ -147,5 +147,8 @@ class Counters {
         close(group_fd);
         close(bm_fd);
         close(l1dm_fd);
+        for (uint32_t i = 0; i < 3; ++i) {
+            munmap(mmaps[i], MMAP_SIZE);
+        }
     }
 };
