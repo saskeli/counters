@@ -109,21 +109,14 @@ class Counters {
         pmc_id[0] = mmap_id(group_fd, "group leader (instruction counter)", 0);
         pmc_id[1] = mmap_id(bm_fd, "branch missprediction counter", 1);
         pmc_id[2] = mmap_id(l1dm_fd, "cache miss counter", 2);
-        std::cerr << "counters initialized and running" << std::endl;
-        std::cerr << " counter ids: " << pmc_id[0] << ", " << pmc_id[1] << ", " << pmc_id[2] << std::endl;
         reset();
     }
 
     void reset() {
-        std::cerr << "reset __rdtsc" << std::endl;
         base_counts_[0] = __rdtsc();
-        std::cerr << " -> " << base_counts_[0] << "\nrdpmc(" << pmc_id[0] << ", " << mmaps[0]->index << ")" << std::endl;
         base_counts_[1] = __rdpmc(pmc_id[0]);
-        std::cerr << " -> " << base_counts_[1] << "\nrdpmc(" << pmc_id[1] << ", " << mmaps[1]->index << ")" << std::endl;
         base_counts_[2] = __rdpmc(pmc_id[1]);
-        std::cerr << " -> " << base_counts_[2] << "\nrdpmc(" << pmc_id[2] << ", " << mmaps[2]->index << ")" << std::endl;
         base_counts_[3] = __rdpmc(pmc_id[2]);
-        std::cerr << " -> " << base_counts_[3] << "\nDone!" << std::endl;
     }
 
     const std::array<uint64_t, num_counters_>& accumulate(uint16_t i) {
