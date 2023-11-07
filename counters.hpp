@@ -23,14 +23,6 @@ class Counters {
     int group_fd, bm_fd, l1dm_fd;
     uint32_t pmc_id[3];
 
-    struct read_format {
-        uint64_t nr;            /* The number of events */
-        struct {
-            uint64_t value;     /* The value of the event */
-            uint64_t id;
-        } values[num_counters_ - 1];
-    } counter_data;
-
     static uint32_t mmap_id(int fd, const std::string& counter_name) {
         struct perf_event_mmap_page* perf_mm;
         const constexpr uint32_t MMAP_SIZE = 4096;
@@ -115,6 +107,7 @@ class Counters {
         pmc_id[1] = mmap_id(bm_fd, "branch missprediction counter");
         pmc_id[2] = mmap_id(l1dm_fd, "cache miss counter");
         std::cerr << "counters initialized and running" << std::endl;
+        std::cerr << " counter ids: " << pmc_id[0] << ", " << pmc_id[1] << ", " << pmc_id[2] << std::endl;
         reset();
     }
 
