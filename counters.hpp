@@ -59,7 +59,7 @@ class Counters {
         perf_event_attr pe;
         memset(&pe, 0, sizeof(perf_event_attr));
         pe.type = PERF_TYPE_HARDWARE;
-        pe.size = sizeof(perf_event_attr);
+        pe.size = sizeof(pe);
         pe.config = PERF_COUNT_HW_INSTRUCTIONS;
         pe.exclude_kernel = true;
         pe.exclude_hv = true;
@@ -79,6 +79,10 @@ class Counters {
         }
 
         memset(&pe, 0, sizeof(perf_event_attr));
+        pe.read_format = 0;
+        pe.size = sizeof(pe);
+        pe.exclude_kernel = true;
+        pe.exclude_hv = true;
         pe.config = PERF_COUNT_HW_BRANCH_MISSES;
         bm_fd = syscall(SYS_perf_event_open, &pe, 0, -1, group_fd, 0);
         if (bm_fd == -1) {
@@ -91,6 +95,9 @@ class Counters {
 
         memset(&pe, 0, sizeof(perf_event_attr));
         pe.config = PERF_COUNT_HW_CACHE_MISSES;
+        pe.size = sizeof(pe);
+        pe.exclude_kernel = true;
+        pe.exclude_hv = true;
         l1dm_fd = syscall(SYS_perf_event_open, &pe, 0, -1, group_fd, 0);
         if (l1dm_fd == -1) {
             err = errno;
