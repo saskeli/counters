@@ -120,24 +120,32 @@ class Counters {
         reset();
     }
 
+    inline uint64_t rdpmc(uint32_t id) volatile {
+        return __rdpmc(id);
+    }
+
+    inline uint64_t rdtsc() volatile {
+        return __rdtsc();
+    }
+
     void reset() {
-        base_counts_[0] = __rdtsc();
-        base_counts_[1] = __rdpmc(pmc_id[0]);
-        base_counts_[2] = __rdpmc(pmc_id[1]);
-        base_counts_[3] = __rdpmc(pmc_id[2]);
+        base_counts_[0] = rdtsc();
+        base_counts_[1] = rdpmc(pmc_id[0]);
+        base_counts_[2] = rdpmc(pmc_id[1]);
+        base_counts_[3] = rdpmc(pmc_id[2]);
     }
 
     const std::array<uint64_t, num_counters_>& accumulate(uint16_t i) {
-        uint64_t c = __rdtsc();
+        uint64_t c = rdtsc();
         section_cumulatives_[i][0] = c - base_counts_[0];
         base_counts_[0] = c;
-        c = __rdpmc(pmc_id[0]);
+        c = rdpmc(pmc_id[0]);
         section_cumulatives_[i][1] = c - base_counts_[1];
         base_counts_[1] = c;
-        c = __rdpmc(pmc_id[1]);
+        c = rdpmc(pmc_id[1]);
         section_cumulatives_[i][2] = c - base_counts_[2];
         base_counts_[2] = c;
-        c = __rdpmc(pmc_id[2]);
+        c = rdpmc(pmc_id[2]);
         section_cumulatives_[i][3] = c - base_counts_[3];
         base_counts_[3] = c;
         return section_cumulatives_[i];
