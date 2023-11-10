@@ -1,4 +1,4 @@
-CFLAGS = -std=c++2a -Wall -Wextra -Wshadow -pedantic -Werror -DCACHE_LINE=$(CL) -march=native
+CFLAGS = -std=c++2a -Wall -Wextra -Wshadow -pedantic -Werror -march=native
 
 .DEFAULT: test
 

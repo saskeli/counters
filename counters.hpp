@@ -151,6 +151,10 @@ class Counters {
         return section_cumulatives_[i];
     }
 
+    const std::array<uint64_t, num_counters_>& get(uint16_t i) {
+        return section_cumulatives_[i];
+    }
+
     ~Counters() {
         prctl(PR_TASK_PERF_EVENTS_DISABLE);
         close(group_fd);

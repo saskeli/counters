@@ -9,9 +9,15 @@ Currently non-modulear, hard coded setup for
 * Branch misspredictions
 * L1D cache read misses
 
-Note that this may not be any faster or more efficient than existing applications, but should hopefully do less poisoning of cache and branch predictores, as well as work without kernel hacking, than competing approaches I've found.
+Note that this may not be any faster or more efficient than existing applications, but should hopefully 
 
-While being easy to use.
+* do less poisoning of cache
+* do less branch predictor poisoning
+* work without kernel hacking
+
+than competing approaches I've found. While being easy to use.
+
+Will currently not deal with overflows at all.
 
 ## Usage
 
