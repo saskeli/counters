@@ -42,6 +42,7 @@ for (size_t i = 0; i < iterations; ++i) {
   count.accumulate(1);
   /* non-intresting code */
 }
-auto c1 = count.get(0); // array of cycles, instructions, branch misses, cache misses for secition 1
-auto c2 = count.get(1); // array of cycles, instructions, branch misses, cache misses for secition 2
+// Get arrays of cycles, instruction, branch misses, cache misses
+auto c1 = count.get(0); // for secition 1
+auto c2 = count.get(1); // for secition 2
 ```
