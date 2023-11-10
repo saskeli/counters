@@ -22,7 +22,7 @@ Will currently not deal with overflows at all.
 ## Usage
 
 ```c++
-#import counters.hpp
+#import "counters.hpp"
 ```
 
 At any point before starting actual timing, initalize a counters object, templated with how many different sections you want to profile.
