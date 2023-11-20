@@ -13,7 +13,7 @@
 #include <iomanip>
 #include <iostream>
 
-template <uint16_t sections>
+template <uint16_t sections, bool pipeline_flush = false>
 class Counters {
    private:
     static const constexpr uint16_t num_counters_ = 4;
@@ -120,32 +120,30 @@ class Counters {
         reset();
     }
 
-    inline uint64_t rdpmc(uint32_t id) volatile {
-        return __rdpmc(id);
-    }
-
-    inline uint64_t rdtsc() volatile {
-        return __rdtsc();
-    }
-
     void reset() {
-        base_counts_[0] = rdtsc();
-        base_counts_[1] = rdpmc(pmc_id[0]);
-        base_counts_[2] = rdpmc(pmc_id[1]);
-        base_counts_[3] = rdpmc(pmc_id[2]);
+        if constexpr (pipeline_flush) {
+            __asm__ __volatile__("cpuid" ::"a" (0): "%ebx", "%ecx", "%edx");
+        }
+        base_counts_[0] = __rdtsc();
+        base_counts_[1] = __rdpmc(pmc_id[0]);
+        base_counts_[2] = __rdpmc(pmc_id[1]);
+        base_counts_[3] = __rdpmc(pmc_id[2]);
     }
 
     const std::array<uint64_t, num_counters_>& accumulate(uint16_t i) {
-        uint64_t c = rdtsc();
+        if constexpr (pipeline_flush) {
+            __asm__ __volatile__("cpuid" ::"a" (0): "%ebx", "%ecx", "%edx");
+        }
+        uint64_t c = __rdtsc();
         section_cumulatives_[i][0] = c - base_counts_[0];
         base_counts_[0] = c;
-        c = rdpmc(pmc_id[0]);
+        c = __rdpmc(pmc_id[0]);
         section_cumulatives_[i][1] = c - base_counts_[1];
         base_counts_[1] = c;
-        c = rdpmc(pmc_id[1]);
+        c = __rdpmc(pmc_id[1]);
         section_cumulatives_[i][2] = c - base_counts_[2];
         base_counts_[2] = c;
-        c = rdpmc(pmc_id[2]);
+        c = __rdpmc(pmc_id[2]);
         section_cumulatives_[i][3] = c - base_counts_[3];
         base_counts_[3] = c;
         return section_cumulatives_[i];
