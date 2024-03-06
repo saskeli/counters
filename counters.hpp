@@ -79,6 +79,7 @@ class Counters {
         }
 
         memset(&pe, 0, sizeof(perf_event_attr));
+        pe.type = PERF_TYPE_HARDWARE;
         pe.read_format = 0;
         pe.size = sizeof(pe);
         pe.exclude_kernel = true;
@@ -94,7 +95,8 @@ class Counters {
         }
 
         memset(&pe, 0, sizeof(perf_event_attr));
-        pe.config = PERF_COUNT_HW_CACHE_MISSES;
+        pe.type = PERF_TYPE_HW_CACHE;
+        pe.config = PERF_COUNT_HW_CACHE_L1D | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
         pe.size = sizeof(pe);
         pe.exclude_kernel = true;
         pe.exclude_hv = true;
