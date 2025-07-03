@@ -12,7 +12,7 @@ int main() {
     }
     count::Default<3> count;
     std::cout << "For printing this 'Hello World!':" << std::endl;
-    count.accumulate(0);
+    count.accumulate();
     count.output_counters(0);
     size_t n = 1000;
     for (size_t i = 0; i < n; ++i) {
@@ -20,8 +20,8 @@ int main() {
         for (size_t j = 0; j < 100000; ++j) {
             acc[j] *= nums[j];
         }
-        count.accumulate(1);
-        count.accumulate(2);
+        count.accumulate<1>();
+        count.accumulate<2>();
     }
     std::cout << "\nArray multiplication on average" << std::endl;
     count.output_counters(1, n);

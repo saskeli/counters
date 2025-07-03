@@ -350,7 +350,7 @@ class Counters {
    *
    * @tparam section  Section to accumulate.
    */
-  template <uint16_t section>
+  template <uint16_t section = 0>
   void accumulate() {
     uint64_t c = __rdtsc();
     section_cumulatives_[section][0] = c - base_counts_[0];

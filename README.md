@@ -21,18 +21,18 @@ Will currently not deal with overflows at all.
 At any point before starting actual timing, initalize a counters object, templated with how many different sections you want to profile.
 
 ```c++
-count::Default<2> count;
+count::Default<2> counter;
 ```
 
 Now you should be able to profile code sections like so:
 
 ```c++
 for (size_t i = 0; i < iterations; ++i) {
-  count.reset();
+  counter.reset();
   /* some intresting code #1 */
-  count.accumulate(0);
+  counter.accumulate();
   /* some intresting code #2 */
-  count.accumulate(1);
+  counter.accumulate<1>();
   /* non-intresting code */
 }
 // Output: 
@@ -42,13 +42,15 @@ for (size_t i = 0; i < iterations; ++i) {
 //  * Mean branch misses per iteration
 //  * Overall IPC
 std::cout << "For section 0" << std::endl;
-count.output_counters(0, iterations);
+counter.output_counters(0, iterations);
 
 std::cout << "\nAnd for section 1 (to std:cerr)" << std::endl; 
-count.output_counters(0, iterations, std::cerr);
+counter.output_counters(1, iterations, std::cerr);
 ```
 
 ## More details
+
+### Configuring
 
 The `Counters<uint16_t sections, Counter... counters>` class can be used to manually specify the counters used and the number of sections.
 
@@ -77,3 +79,47 @@ Available counters:
   branch_miss_rate, /**! `branch_miss / branches`. Requires both of these
                        counters, and needs to be after any actual counters. */
 ```
+
+For example, if you are only intrested in TLB misses in a single section, you would do:
+
+```c++
+count::Counters<1, Counter::DTLB_miss, Counter::ITLB_miss> counters;
+```
+
+This will still output elapsed cycles, since the counter is allways running anyway.
+
+### Expected performance
+
+On my machine, running `./test` yields:
+
+```bash
+[saskeli@computer counters]$ ./test
+For printing this 'Hello World!':
+Cycles:	161270
+Instructions:	5232
+Branch misspredictions:	103
+L1D misses:	228
+IPC:	0.0324425
+
+Array multiplication on average
+Cycles:	71.494
+Instructions:	375.03
+Branch misspredictions:	0.001
+L1D misses:	25.003
+IPC:	5.24562
+
+'Nothing' on average
+Cycles:	0.069
+Instructions:	0.031
+Branch misspredictions:	0
+L1D misses:	0.001
+IPC:	0.449275
+
+Checksum: 14990041521197361340
+```
+
+Statistics for the single print are very unstable and don't make too much sense. Not the intended use-case.
+
+Array multiplication statistics are very stable, but the actual values don't necessarily make sence. But if you change the implementation, you should be able to reason about the performance based on the changes in the statistics.
+
+Nothing is generally nothing. `accumulate` has low overhead.
