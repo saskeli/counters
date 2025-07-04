@@ -320,6 +320,15 @@ class Counters {
   }
 
   /**
+   * Clears all accumulators.
+   */
+  void clear() {
+    for (auto arr : section_cumulatives_) {
+      std::fill(arr.begin(), arr.end(), 0);
+    }
+  }
+
+  /**
    * Adds counter accumulation from last reset for `section`
    *
    * Templated version is probably a bit lower overhead...
