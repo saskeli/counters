@@ -24,25 +24,19 @@ namespace count {
  * No separate Cycle couter is available, as RTC will allways be used.
  */
 enum Counter {
-  instructions,      /**! Number of retired instructions */
-  branch_miss,       /**! Number of branch misspredictions */
-  branches,          /**! Number of retired branch instructions */
-  L1D_access,        /**! Number of Level 1 data cache accesses */
-  L1D_miss,          /**! Number of Level 1 data cache misses */
-  L1I_access,        /**! Number of Level 1 instruction cache accesses */
-  L1I_miss,          /**! Number of Level 1 instructino cache misses */
-  DTLB_miss,         /**! Number of Data TLB misses */
-  ITLB_miss,         /**! Number of Instruction TLB misses */
-  page_faults,       /**! Number of page faults */
-  page_faults_minor, /**! Number of page faults not requiring secondary storage
-                        IO */
-  page_faults_major, /**! Number of page faults requiring secondary storage IO
-                      */
-  context_switches, /**! Number of context switches (related to this process) */
-  alignment_faults, /**! Counts unaligned memory accesses */
-  emulation_faults, /**! Counts number of emulated instructions */
-  IPC, /**! Ratio of retired instructions / elapsed time. Requires the
-          `instructions` counter. Needs to be efter any actual counters. */
+  instructions, /**! Number of retired instructions */
+  branch_miss,  /**! Number of branch misspredictions */
+  branches,     /**! Number of retired branch instructions */
+  L1D_access,   /**! Number of Level 1 data cache accesses */
+  L1D_miss,     /**! Number of Level 1 data cache misses */
+  L1I_access,   /**! Number of Level 1 instruction cache accesses */
+  L1I_miss,     /**! Number of Level 1 instructino cache misses */
+  DTLB_miss,    /**! Number of Data TLB misses */
+  ITLB_miss,    /**! Number of Instruction TLB misses */
+  LL_access,    /**! Number of Last Level cache accesses */
+  LL_miss,      /**! Number of Last Level cache misses */
+  IPC,          /**! Ratio of retired instructions / elapsed time. Requires the
+                   `instructions` counter. Needs to be efter any actual counters. */
   branch_miss_rate, /**! `branch_miss / branches`. Requires both of these
                        counters, and needs to be after any actual counters. */
 };
@@ -192,24 +186,14 @@ class Counters {
       pe.config = PERF_COUNT_HW_CACHE_ITLB |
                   (PERF_COUNT_HW_CACHE_OP_READ << 8) |
                   (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
-    } else if constexpr (C == Counter::page_faults) {
-      pe.type = PERF_TYPE_SOFTWARE;
-      pe.config = PERF_COUNT_SW_PAGE_FAULTS;
-    } else if constexpr (C == Counter::page_faults_major) {
-      pe.type = PERF_TYPE_SOFTWARE;
-      pe.config = PERF_COUNT_SW_PAGE_FAULTS_MAJ;
-    } else if constexpr (C == Counter::page_faults_minor) {
-      pe.type = PERF_TYPE_SOFTWARE;
-      pe.config = PERF_COUNT_SW_PAGE_FAULTS_MIN;
-    } else if constexpr (C == Counter::context_switches) {
-      pe.type = PERF_TYPE_SOFTWARE;
-      pe.config = PERF_COUNT_SW_CONTEXT_SWITCHES;
-    } else if constexpr (C == Counter::alignment_faults) {
-      pe.type = PERF_TYPE_SOFTWARE;
-      pe.config = PERF_COUNT_SW_ALIGNMENT_FAULTS;
-    } else if constexpr (C == Counter::emulation_faults) {
-      pe.type = PERF_TYPE_SOFTWARE;
-      pe.config = PERF_COUNT_SW_EMULATION_FAULTS;
+    } else if constexpr (C == Counter::LL_access) {
+      pe.type = PERF_TYPE_HW_CACHE;
+      pe.config = PERF_COUNT_HW_CACHE_LL | (PERF_COUNT_HW_CACHE_OP_READ << 8) |
+                  (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16);
+    } else if constexpr (C == Counter::LL_miss) {
+      pe.type = PERF_TYPE_HW_CACHE;
+      pe.config = PERF_COUNT_HW_CACHE_LL | (PERF_COUNT_HW_CACHE_OP_READ << 8) |
+                  (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
     } else {
       static_assert(false, "Invalid peformance counter");
     }
@@ -283,18 +267,10 @@ class Counters {
         out << "DTLB misses:\t";
       } else if constexpr (c == Counter::ITLB_miss) {
         out << "ITLB misses:\t";
-      } else if constexpr (c == Counter::page_faults) {
-        out << "Page faults:\t";
-      } else if constexpr (c == Counter::page_faults_major) {
-        out << "Major page faults:\t";
-      } else if constexpr (c == Counter::page_faults_minor) {
-        out << "Minot page faults:\t";
-      } else if constexpr (c == Counter::context_switches) {
-        out << "Context switches:\t";
-      } else if constexpr (c == Counter::alignment_faults) {
-        out << "Alignment faults:\t";
-      } else if constexpr (c == Counter::emulation_faults) {
-        out << "Emulation faults:\t";
+      } else if constexpr (c == Counter::LL_access) {
+        out << "LL hits:\t";
+      } else if constexpr (c == Counter::LL_miss) {
+        out << "LL misses:\t";
       } else {
         static_assert(false, "Invalid peformance counter");
       }

@@ -57,25 +57,19 @@ The `Counters<uint16_t sections, Counter... counters>` class can be used to manu
 Available counters:
 
 ```c++
-  instructions,      /**! Number of retired instructions */
-  branch_miss,       /**! Number of branch misspredictions */
-  branches,          /**! Number of retired branch instructions */
-  L1D_access,        /**! Number of Level 1 data cache accesses */
-  L1D_miss,          /**! Number of Level 1 data cache misses */
-  L1I_access,        /**! Number of Level 1 instruction cache accesses */
-  L1I_miss,          /**! Number of Level 1 instructino cache misses */
-  DTLB_miss,         /**! Number of Data TLB misses */
-  ITLB_miss,         /**! Number of Instruction TLB misses */
-  page_faults,       /**! Number of page faults */
-  page_faults_minor, /**! Number of page faults not requiring secondary storage
-                        IO */
-  page_faults_major, /**! Number of page faults requiring secondary storage IO
-                      */
-  context_switches, /**! Number of context switches (related to this process) */
-  alignment_faults, /**! Counts unaligned memory accesses */
-  emulation_faults, /**! Counts number of emulated instructions */
-  IPC, /**! Ratio of retired instructions / elapsed time. Requires the
-          `instructions` counter. Needs to be efter any actual counters. */
+  instructions, /**! Number of retired instructions */
+  branch_miss,  /**! Number of branch misspredictions */
+  branches,     /**! Number of retired branch instructions */
+  L1D_access,   /**! Number of Level 1 data cache accesses */
+  L1D_miss,     /**! Number of Level 1 data cache misses */
+  L1I_access,   /**! Number of Level 1 instruction cache accesses */
+  L1I_miss,     /**! Number of Level 1 instructino cache misses */
+  DTLB_miss,    /**! Number of Data TLB misses */
+  ITLB_miss,    /**! Number of Instruction TLB misses */
+  LL_access,    /**! Number of Last Level cache accesses */
+  LL_miss,      /**! Number of Last Level cache misses */
+  IPC,          /**! Ratio of retired instructions / elapsed time. Requires the
+                   `instructions` counter. Needs to be efter any actual counters. */
   branch_miss_rate, /**! `branch_miss / branches`. Requires both of these
                        counters, and needs to be after any actual counters. */
 ```
