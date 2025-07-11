@@ -8,9 +8,9 @@ Note that this may not be any faster or more efficient than existing application
 * do less branch predictor poisoning
 * work without kernel hacking
 
-than competing approaches I've found. While being easy to use.
+compared to competing approaches I've found. While being easy to use.
 
-Will currently not deal with overflows at all.
+Will currently not deal with overflows at all. Make sure that at most $2^{48}$ cycles elapse between the creation of the counters and the last read.
 
 ## Simple usage
 

@@ -59,7 +59,7 @@ enum Counter {
  * @tparam sections  Number of instances of each counter.
  * @tparam counters  Parameter pack definition of all counters used.
  */
-template <uint16_t sections, Counter... counters>
+template <bool pipeline_flush, uint16_t sections, Counter... counters>
 class Counters {
   template <bool has_instructions, bool has_b_count, bool has_b_miss,
             bool seen_ratio, Counter C, Counter... rest>
@@ -313,6 +313,9 @@ class Counters {
    * Sets the zero point for the timer.
    */
   void reset() {
+    if constexpr (pipeline_flush) {
+      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+    }
     base_counts_[0] = __rdtsc();
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
@@ -323,6 +326,9 @@ class Counters {
    * Clears all accumulators.
    */
   void clear() {
+    if constexpr (pipeline_flush) {
+      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+    }
     for (auto arr : section_cumulatives_) {
       std::fill(arr.begin(), arr.end(), 0);
     }
@@ -337,6 +343,9 @@ class Counters {
    */
   template <uint16_t section = 0>
   void accumulate() {
+    if constexpr (pipeline_flush) {
+      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+    }
     uint64_t c = __rdtsc();
     section_cumulatives_[section][0] = c - base_counts_[0];
     base_counts_[0] = c;
@@ -355,6 +364,9 @@ class Counters {
    * @param section  Section to accumulate.
    */
   void accumulate(uint16_t section) {
+    if constexpr (pipeline_flush) {
+      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+    }
     uint64_t c = __rdtsc();
     section_cumulatives_[section][0] = c - base_counts_[0];
     base_counts_[0] = c;
@@ -408,7 +420,7 @@ class Counters {
 };
 
 template <uint16_t sect = 1>
-using Default = Counters<sect, Counter::instructions, Counter::branch_miss,
+using Default = Counters<false, sect, Counter::instructions, Counter::branch_miss,
                          Counter::L1D_miss, Counter::IPC>;
 
 }  // namespace count
