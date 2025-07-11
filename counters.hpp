@@ -313,12 +313,12 @@ class Counters {
    * Sets the zero point for the timer.
    */
   void reset() {
-    if constexpr (pipeline_flush) {
-      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
-    }
     base_counts_[0] = __rdtsc();
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
+    }
+    if constexpr (pipeline_flush) {
+      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
     }
   }
 
@@ -326,11 +326,11 @@ class Counters {
    * Clears all accumulators.
    */
   void clear() {
-    if constexpr (pipeline_flush) {
-      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
-    }
     for (auto arr : section_cumulatives_) {
       std::fill(arr.begin(), arr.end(), 0);
+    }
+    if constexpr (pipeline_flush) {
+      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
     }
   }
 
@@ -354,6 +354,9 @@ class Counters {
       section_cumulatives_[section][i + 1] = c - base_counts_[i + 1];
       base_counts_[i + 1] = c;
     }
+    if constexpr (pipeline_flush) {
+      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+    }
   }
 
   /**
@@ -374,6 +377,9 @@ class Counters {
       c = __rdpmc(pmc_id_[i]);
       section_cumulatives_[section][i + 1] = c - base_counts_[i + 1];
       base_counts_[i + 1] = c;
+    }
+    if constexpr (pipeline_flush) {
+      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
     }
   }
 
