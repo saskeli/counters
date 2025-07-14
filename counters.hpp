@@ -291,7 +291,7 @@ class Counters {
 
   void serialize() {
 #if defined(__skylake__) || defined(__cascadelake__)
-    __asm__ __volatile__("xchg %%rax, %%rax" ::: "memory");
+    __asm__ __volatile__("xchg %%rax, %%rax" ::: "rax", "memory");
 #elif defined(__znver1__) || defined(__znver2__) || defined(__znver3__) || \
     defined(__znver4__) || defined(__znver5__)
     __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
