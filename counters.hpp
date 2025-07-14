@@ -330,6 +330,7 @@ class Counters {
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
     }
     if constexpr (pipeline_flush) {
+      serialize();
     }
   }
 
