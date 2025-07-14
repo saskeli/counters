@@ -342,9 +342,7 @@ class Counters {
     for (auto arr : section_cumulatives_) {
       std::fill(arr.begin(), arr.end(), 0);
     }
-    if constexpr (pipeline_flush) {
-      serialize();
-    }
+    reset();
   }
 
   /**
@@ -361,10 +359,10 @@ class Counters {
     }
     uint64_t c = __rdtsc();
     section_cumulatives_[section][0] = c - base_counts_[0];
-    base_counts_[0] = c;
+    base_counts_[0] += c;
     for (uint16_t i = 0; i < pmc_id_.size(); ++i) {
       c = __rdpmc(pmc_id_[i]);
-      section_cumulatives_[section][i + 1] = c - base_counts_[i + 1];
+      section_cumulatives_[section][i + 1] += c - base_counts_[i + 1];
       base_counts_[i + 1] = c;
     }
     if constexpr (pipeline_flush) {
@@ -385,10 +383,10 @@ class Counters {
     }
     uint64_t c = __rdtsc();
     section_cumulatives_[section][0] = c - base_counts_[0];
-    base_counts_[0] = c;
+    base_counts_[0] += c;
     for (uint16_t i = 0; i < pmc_id_.size(); ++i) {
       c = __rdpmc(pmc_id_[i]);
-      section_cumulatives_[section][i + 1] = c - base_counts_[i + 1];
+      section_cumulatives_[section][i + 1] += c - base_counts_[i + 1];
       base_counts_[i + 1] = c;
     }
     if constexpr (pipeline_flush) {
