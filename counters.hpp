@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <immintrin.h>
 #include <linux/perf_event.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -288,6 +289,15 @@ class Counters {
     }
   }
 
+  void serialize() {
+#if defined(__znver1__) || defined(__znver2__) || defined(__znver3__) || \
+    defined(__znver4__) || defined(__znver5__)
+    __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+#else
+    _serialize();
+#endif
+  }
+
  public:
   /**
    * Create and start the counters defined in the template.
@@ -318,7 +328,6 @@ class Counters {
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
     }
     if constexpr (pipeline_flush) {
-      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
     }
   }
 
@@ -330,7 +339,7 @@ class Counters {
       std::fill(arr.begin(), arr.end(), 0);
     }
     if constexpr (pipeline_flush) {
-      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+      serialize();
     }
   }
 
@@ -344,7 +353,7 @@ class Counters {
   template <uint16_t section = 0>
   void accumulate() {
     if constexpr (pipeline_flush) {
-      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+      serialize();
     }
     uint64_t c = __rdtsc();
     section_cumulatives_[section][0] = c - base_counts_[0];
@@ -355,7 +364,7 @@ class Counters {
       base_counts_[i + 1] = c;
     }
     if constexpr (pipeline_flush) {
-      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+      serialize();
     }
   }
 
@@ -368,7 +377,7 @@ class Counters {
    */
   void accumulate(uint16_t section) {
     if constexpr (pipeline_flush) {
-      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+      serialize();
     }
     uint64_t c = __rdtsc();
     section_cumulatives_[section][0] = c - base_counts_[0];
@@ -379,7 +388,7 @@ class Counters {
       base_counts_[i + 1] = c;
     }
     if constexpr (pipeline_flush) {
-      __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
+      serialize();
     }
   }
 
@@ -426,7 +435,7 @@ class Counters {
 };
 
 template <uint16_t sect = 1>
-using Default = Counters<false, sect, Counter::instructions, Counter::branch_miss,
-                         Counter::L1D_miss, Counter::IPC>;
+using Default = Counters<false, sect, Counter::instructions,
+                         Counter::branch_miss, Counter::L1D_miss, Counter::IPC>;
 
 }  // namespace count
