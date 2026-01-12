@@ -11,6 +11,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstddef>
 #include <iomanip>
 #include <iostream>
 #include <ostream>
@@ -337,7 +338,7 @@ class Counters {
    * Clears all accumulators.
    */
   void clear() {
-    for (auto arr : section_cumulatives_) {
+    for (auto& arr : section_cumulatives_) {
       std::fill(arr.begin(), arr.end(), 0);
     }
     reset();
