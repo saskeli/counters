@@ -1,5 +1,4 @@
 #include <fcntl.h>
-#include <immintrin.h>
 #include <linux/perf_event.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -7,11 +6,14 @@
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#if !defined(__aarch64__) && !defined(__arm__)
+#include <immintrin.h>
 #include <x86intrin.h>
+#endif
 
 #include <array>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <ostream>
@@ -296,7 +298,7 @@ class Counters {
     __asm__ __volatile__("cpuid" ::"a"(0) : "%ebx", "%ecx", "%edx");
 #else
     int dummy = 0;
-    __asm__ __volatile__("xchg %0, %0" : "+r"(dummy) :: "rax", "memory");
+    __asm__ __volatile__("xchg %0, %0" : "+r"(dummy)::"rax", "memory");
 #endif
   }
 
@@ -321,13 +323,78 @@ class Counters {
     reset();
   }
 
+#ifdef defined(__aarch64__) || defined(__arm__)
+  uint64_t rd_arm_pmc(uint64_t i) {
+    uint64_t val;
+    switch (i) {
+      case 0:
+        asm volatile("mrs %0, pmevcntr0_el0" : "=r" : (val));
+        break;
+      case 1:
+        asm volatile("mrs %0, pmevcntr1_el0" : "=r" : (val));
+        break;
+      case 2:
+        asm volatile("mrs %0, pmevcntr2_el0" : "=r" : (val));
+        break;
+      case 3:
+        asm volatile("mrs %0, pmevcntr3_el0" : "=r" : (val));
+        break;
+      case 4:
+        asm volatile("mrs %0, pmevcntr4_el0" : "=r" : (val));
+        break;
+      case 5:
+        asm volatile("mrs %0, pmevcntr5_el0" : "=r" : (val));
+        break;
+      case 6:
+        asm volatile("mrs %0, pmevcntr6_el0" : "=r" : (val));
+        break;
+      case 7:
+        asm volatile("mrs %0, pmevcntr7_el0" : "=r" : (val));
+        break;
+      case 8:
+        asm volatile("mrs %0, pmevcntr8_el0" : "=r" : (val));
+        break;
+      case 9:
+        asm volatile("mrs %0, pmevcntr9_el0" : "=r" : (val));
+        break;
+      case 10:
+        asm volatile("mrs %0, pmevcntr10_el0" : "=r" : (val));
+        break;
+      case 11:
+        asm volatile("mrs %0, pmevcntr11_el0" : "=r" : (val));
+        break;
+      case 12:
+        asm volatile("mrs %0, pmevcntr12_el0" : "=r" : (val));
+        break;
+      case 13:
+        asm volatile("mrs %0, pmevcntr13_el0" : "=r" : (val));
+        break;
+      case 14:
+        asm volatile("mrs %0, pmevcntr14_el0" : "=r" : (val));
+        break;
+      default:
+        asm volatile("mrs %0, pmevcntr15_el0" : "=r" : (val));
+    }
+  }
+#endif
+
   /**
    * Sets the zero point for the timer.
    */
   void reset() {
+#ifdef defined(__aarch64__) || defined(__arm__)
+    uint64_t val;
+    asm volatile("mrs %0, pmccntr_el0" : "=r" : (val));
+    base_counts_[0] = val;
+#else
     base_counts_[0] = __rdtsc();
+#endif
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
+#ifdef defined(__aarch64__) || defined(__arm__)
+      base_counts_[i + 1] = rd_arm_pmc(mpc_id_[i]);
+#else
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
+#endif
     }
     if constexpr (pipeline_flush) {
       serialize();
@@ -356,11 +423,20 @@ class Counters {
     if constexpr (pipeline_flush) {
       serialize();
     }
+#if defined(__aarch64__) || defined(__arm__)
+    uint64_t c;
+    asm volatile("mrs %0, pmccntr_el0" : "=r" : (c));
+#else
     uint64_t c = __rdtsc();
+#endif
     section_cumulatives_[section][0] += c - base_counts_[0];
     base_counts_[0] = c;
     for (uint16_t i = 0; i < pmc_id_.size(); ++i) {
+#if defined(__aarch64__) || defined(__arm__)
+      c = rd_arm_pmc(pmc_id_[i]);
+#else
       c = __rdpmc(pmc_id_[i]);
+#endif
       section_cumulatives_[section][i + 1] += c - base_counts_[i + 1];
       base_counts_[i + 1] = c;
     }
@@ -380,11 +456,20 @@ class Counters {
     if constexpr (pipeline_flush) {
       serialize();
     }
+#if defined(__aarch64__) || defined(__arm__)
+    uint64_t c;
+    asm volatile("mrs %0, pmccntr_el0" : "=r" : (c));
+#else
     uint64_t c = __rdtsc();
+#endif
     section_cumulatives_[section][0] += c - base_counts_[0];
     base_counts_[0] = c;
     for (uint16_t i = 0; i < pmc_id_.size(); ++i) {
+#if defined(__aarch64__) || defined(__arm__)
+      c = rd_arm_pmc(pmc_id_[i]);
+#else
       c = __rdpmc(pmc_id_[i]);
+#endif
       section_cumulatives_[section][i + 1] += c - base_counts_[i + 1];
       base_counts_[i + 1] = c;
     }
