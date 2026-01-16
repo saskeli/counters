@@ -328,52 +328,52 @@ class Counters {
     uint64_t val;
     switch (i) {
       case 0:
-        asm volatile("mrs %0, pmevcntr0_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr0_el0" : "=r"(val));
         break;
       case 1:
-        asm volatile("mrs %0, pmevcntr1_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr1_el0" : "=r"(val));
         break;
       case 2:
-        asm volatile("mrs %0, pmevcntr2_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr2_el0" : "=r"(val));
         break;
       case 3:
-        asm volatile("mrs %0, pmevcntr3_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr3_el0" : "=r"(val));
         break;
       case 4:
-        asm volatile("mrs %0, pmevcntr4_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr4_el0" : "=r"(val));
         break;
       case 5:
-        asm volatile("mrs %0, pmevcntr5_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr5_el0" : "=r"(val));
         break;
       case 6:
-        asm volatile("mrs %0, pmevcntr6_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr6_el0" : "=r"(val));
         break;
       case 7:
-        asm volatile("mrs %0, pmevcntr7_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr7_el0" : "=r"(val));
         break;
       case 8:
-        asm volatile("mrs %0, pmevcntr8_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr8_el0" : "=r"(val));
         break;
       case 9:
-        asm volatile("mrs %0, pmevcntr9_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr9_el0" : "=r"(val));
         break;
       case 10:
-        asm volatile("mrs %0, pmevcntr10_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr10_el0" : "=r"(val));
         break;
       case 11:
-        asm volatile("mrs %0, pmevcntr11_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr11_el0" : "=r"(val));
         break;
       case 12:
-        asm volatile("mrs %0, pmevcntr12_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr12_el0" : "=r"(val));
         break;
       case 13:
-        asm volatile("mrs %0, pmevcntr13_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr13_el0" : "=r"(val));
         break;
       case 14:
-        asm volatile("mrs %0, pmevcntr14_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr14_el0" : "=r"(val));
         break;
       default:
-        asm volatile("mrs %0, pmevcntr15_el0" : "=r" : (val));
+        asm volatile("mrs %0, pmevcntr15_el0" : "=r"(val));
     }
   }
 #endif
@@ -384,7 +384,7 @@ class Counters {
   void reset() {
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t val;
-    asm volatile("mrs %0, pmccntr_el0" : "=r" : (val));
+    asm volatile("mrs %0, pmccntr_el0" : "=r"(val));
     base_counts_[0] = val;
 #else
     base_counts_[0] = __rdtsc();
@@ -425,7 +425,7 @@ class Counters {
     }
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t c;
-    asm volatile("mrs %0, pmccntr_el0" : "=r" : (c));
+    asm volatile("mrs %0, pmccntr_el0" : "=r"(c));
 #else
     uint64_t c = __rdtsc();
 #endif
@@ -458,7 +458,7 @@ class Counters {
     }
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t c;
-    asm volatile("mrs %0, pmccntr_el0" : "=r" : (c));
+    asm volatile("mrs %0, pmccntr_el0" : "=r"(c));
 #else
     uint64_t c = __rdtsc();
 #endif
