@@ -323,7 +323,7 @@ class Counters {
     reset();
   }
 
-#ifdef defined(__aarch64__) || defined(__arm__)
+#if defined(__aarch64__) || defined(__arm__)
   uint64_t rd_arm_pmc(uint64_t i) {
     uint64_t val;
     switch (i) {
@@ -382,7 +382,7 @@ class Counters {
    * Sets the zero point for the timer.
    */
   void reset() {
-#ifdef defined(__aarch64__) || defined(__arm__)
+#if defined(__aarch64__) || defined(__arm__)
     uint64_t val;
     asm volatile("mrs %0, pmccntr_el0" : "=r" : (val));
     base_counts_[0] = val;
@@ -390,7 +390,7 @@ class Counters {
     base_counts_[0] = __rdtsc();
 #endif
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
-#ifdef defined(__aarch64__) || defined(__arm__)
+#if defined(__aarch64__) || defined(__arm__)
       base_counts_[i + 1] = rd_arm_pmc(mpc_id_[i]);
 #else
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
