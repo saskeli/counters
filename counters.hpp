@@ -375,6 +375,7 @@ class Counters {
       default:
         asm volatile("mrs %0, pmevcntr15_el0" : "=r"(val));
     }
+    return val;
   }
 #endif
 
@@ -391,7 +392,7 @@ class Counters {
 #endif
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
 #if defined(__aarch64__) || defined(__arm__)
-      base_counts_[i + 1] = rd_arm_pmc(mpc_id_[i]);
+      base_counts_[i + 1] = rd_arm_pmc(pmc_id_[i]);
 #else
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
 #endif
