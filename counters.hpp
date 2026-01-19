@@ -139,11 +139,13 @@ class Counters {
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(1);
     }
+#if !defined(__aarch64__) && !defined(__arm__)
     if (mmaps_[pemmap_index]->cap_user_rdpmc == 0) {
       std::cerr << "missing rdpmc support for counter " << pemmap_index
                 << std::endl;
       exit(1);
     }
+#endif
 
     uint32_t r = mmaps_[pemmap_index]->index;
     if (r == 0) {
