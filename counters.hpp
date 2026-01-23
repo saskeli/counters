@@ -338,9 +338,9 @@ class Counters {
     asm volatile("mrs %0, cntvct_el0" : "=r"(val));
     base_counts_[0] = val;
     val = sizeof(uint64_t) * (base_counts_.size() - 1);
-    if (read(pmc_id_[1], base_counts_.data() + 1, val) != val) [[unlikely]] {
+    if (read(pmc_id_[0], base_counts_.data() + 1, val) != val) [[unlikely]] {
       int err = errno;
-      std::cerr << "Error reading counter " << i << std::endl;
+      std::cerr << "Error reading counter group" << std::endl;
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(err);
     }
@@ -382,11 +382,11 @@ class Counters {
     asm volatile("mrs %0, cntvct_el0" : "=r"(c));
     section_cumulatives_[section][0] += c - base_counts_[0];
     base_counts_[0] = c;
-    val = sizeof(uint64_t) * (base_counts_.size() - 1);
+    int64_t val = sizeof(uint64_t) * (base_counts_.size() - 1);
     std::array<uint64_t, base_counts_.size() - 1> c_arr;
-    if (read(pmc_id_[i], c_arr.data(), val) != val) [[unlikely]] {
+    if (read(pmc_id_[0], c_arr.data(), val) != val) [[unlikely]] {
       int err = errno;
-      std::cerr << "Error reading counter " << i << std::endl;
+      std::cerr << "Error reading counter group" << std::endl;
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(err);
     }
@@ -425,11 +425,11 @@ class Counters {
     asm volatile("mrs %0, cntvct_el0" : "=r"(c));
     section_cumulatives_[section][0] += c - base_counts_[0];
     base_counts_[0] = c;
-    val = sizeof(uint64_t) * (base_counts_.size() - 1);
+    int64_t val = sizeof(uint64_t) * (base_counts_.size() - 1);
     std::array<uint64_t, base_counts_.size() - 1> c_arr;
-    if (read(pmc_id_[i], c_arr.data(), val) != val) [[unlikely]] {
+    if (read(pmc_id_[0], c_arr.data(), val) != val) [[unlikely]] {
       int err = errno;
-      std::cerr << "Error reading counter " << i << std::endl;
+      std::cerr << "Error reading counter group" << std::endl;
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(err);
     }
