@@ -338,7 +338,7 @@ class Counters {
 #endif
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
 #if defined(__aarch64__) || defined(__arm__)
-      if (read(pmc_id_[i], base_counts_ + i + 1, sizeof(uint64_t)) != sizeof(uint64_t)) [[unlikely]] {
+      if (read(pmc_id_[i], base_counts_.data() + i + 1, sizeof(uint64_t)) != sizeof(uint64_t)) [[unlikely]] {
         int err = errno;
         std::cerr << "Error reading counter i" << std::endl;
         std::cerr << err << ": " << strerror(err) << std::endl;
