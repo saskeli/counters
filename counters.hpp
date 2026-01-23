@@ -334,10 +334,10 @@ class Counters {
    */
   void reset() {
 #if defined(__aarch64__) || defined(__arm__)
-    uint64_t val;
-    asm volatile("mrs %0, cntvct_el0" : "=r"(val));
-    base_counts_[0] = val;
-    val = sizeof(uint64_t) * (base_counts_.size() - 1);
+    uint64_t c;
+    asm volatile("mrs %0, cntvct_el0" : "=r"(c));
+    base_counts_[0] = c;
+    int64_t val = sizeof(uint64_t) * (base_counts_.size() - 1);
     if (read(pmc_id_[0], base_counts_.data() + 1, val) != val) [[unlikely]] {
       int err = errno;
       std::cerr << "Error reading counter group" << std::endl;
