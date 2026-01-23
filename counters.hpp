@@ -318,10 +318,11 @@ class Counters {
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(1);
     }
-
+#if !defined(__aarch64__) && !defined(__arm__)
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
       pmc_id_[i] = mmap_id(pmc_id_[i], i);
     }
+#endif
     reset();
   }
 
