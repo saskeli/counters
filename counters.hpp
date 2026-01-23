@@ -341,7 +341,7 @@ class Counters {
       if (read(pmc_id_[i], base_counts_ + i + 1, sizeof(uint64_t)) != sizeof(uint64_t)) [[unlikely]] {
         int err = errno;
         std::cerr << "Error reading counter i" << std::endl;
-        std:cerr << err << ": " << strerror(err) << std::endl;
+        std::cerr << err << ": " << strerror(err) << std::endl;
       }
 #else
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
@@ -387,7 +387,7 @@ class Counters {
       if (read(pmc_id_[i], &c, sizeof(uint64_t)) != sizeof(uint64_t)) [[unlikely]] {
         int err = errno;
         std::cerr << "Error reading counter i" << std::endl;
-        std:cerr << err << ": " << strerror(err) << std::endl;
+        std::cerr << err << ": " << strerror(err) << std::endl;
       }
 #else
       c = __rdpmc(pmc_id_[i]);
@@ -424,7 +424,7 @@ class Counters {
       if (read(pmc_id_[i], &c, sizeof(uint64_t)) != sizeof(uint64_t)) [[unlikely]] {
         int err = errno;
         std::cerr << "Error reading counter i" << std::endl;
-        std:cerr << err << ": " << strerror(err) << std::endl;
+        std::cerr << err << ": " << strerror(err) << std::endl;
       }
 #else
       c = __rdpmc(pmc_id_[i]);
