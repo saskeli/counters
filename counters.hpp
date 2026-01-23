@@ -213,8 +213,11 @@ class Counters {
       pe.size = sizeof(perf_event_attr);
       pe.exclude_kernel = true;
       pe.exclude_hv = true;
-      pe.read_format = PERF_FORMAT_ID | PERF_FORMAT_GROUP;
-      pe.disabled = true;
+      pe.read_format = PERF_FORMAT_GROUP;
+#if !defined(__aarch64__) && !defined(__arm__)
+      pe.read_format |= PERF_FORMAT_ID
+#endif
+                            pe.disabled = true;
       set_values<C>(pe);
       int fd = idx ? pmc_id_[0] : -1;
       pmc_id_[idx] = syscall(SYS_perf_event_open, &pe, 0, -1, fd, 0);
@@ -332,22 +335,21 @@ class Counters {
   void reset() {
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t val;
-    asm volatile("mrs %0, cntpct_el0" : "=r"(val));
+    asm volatile("mrs %0, cntvct_el0" : "=r"(val));
     base_counts_[0] = val;
+    val = sizeof(uint64_t) * (base_counts_.size() - 1);
+    if (read(pmc_id_[1], base_counts_.data() + 1, val) != val) [[unlikely]] {
+      int err = errno;
+      std::cerr << "Error reading counter " << i << std::endl;
+      std::cerr << err << ": " << strerror(err) << std::endl;
+      exit(err);
+    }
 #else
     base_counts_[0] = __rdtsc();
-#endif
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
-#if defined(__aarch64__) || defined(__arm__)
-      if (read(pmc_id_[i], base_counts_.data() + i + 1, sizeof(uint64_t)) != sizeof(uint64_t)) [[unlikely]] {
-        int err = errno;
-        std::cerr << "Error reading counter i" << std::endl;
-        std::cerr << err << ": " << strerror(err) << std::endl;
-      }
-#else
       base_counts_[i + 1] = __rdpmc(pmc_id_[i]);
-#endif
     }
+#endif
     if constexpr (pipeline_flush) {
       serialize();
     }
@@ -377,25 +379,31 @@ class Counters {
     }
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t c;
-    asm volatile("mrs %0, cntpct_el0" : "=r"(c));
+    asm volatile("mrs %0, cntvct_el0" : "=r"(c));
+    section_cumulatives_[section][0] += c - base_counts_[0];
+    base_counts_[0] = c;
+    val = sizeof(uint64_t) * (base_counts_.size() - 1);
+    std::array<uint64_t, base_counts_.size() - 1> c_arr;
+    if (read(pmc_id_[i], c_arr.data(), val) != val) [[unlikely]] {
+      int err = errno;
+      std::cerr << "Error reading counter " << i << std::endl;
+      std::cerr << err << ": " << strerror(err) << std::endl;
+      exit(err);
+    }
+    for (size_t i = 0; i < c_arr.size(); ++i) {
+      section_cumulatives_[section][i + 1] += c_arr[i] - base_counts_[i + 1];
+      base_counts_[i + 1] = c_arr[i];
+    }
 #else
     uint64_t c = __rdtsc();
-#endif
     section_cumulatives_[section][0] += c - base_counts_[0];
     base_counts_[0] = c;
     for (uint16_t i = 0; i < pmc_id_.size(); ++i) {
-#if defined(__aarch64__) || defined(__arm__)
-      if (read(pmc_id_[i], &c, sizeof(uint64_t)) != sizeof(uint64_t)) [[unlikely]] {
-        int err = errno;
-        std::cerr << "Error reading counter i" << std::endl;
-        std::cerr << err << ": " << strerror(err) << std::endl;
-      }
-#else
       c = __rdpmc(pmc_id_[i]);
-#endif
       section_cumulatives_[section][i + 1] += c - base_counts_[i + 1];
       base_counts_[i + 1] = c;
     }
+#endif
     if constexpr (pipeline_flush) {
       serialize();
     }
@@ -414,25 +422,31 @@ class Counters {
     }
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t c;
-    asm volatile("mrs %0, cntpct_el0" : "=r"(c));
+    asm volatile("mrs %0, cntvct_el0" : "=r"(c));
+    section_cumulatives_[section][0] += c - base_counts_[0];
+    base_counts_[0] = c;
+    val = sizeof(uint64_t) * (base_counts_.size() - 1);
+    std::array<uint64_t, base_counts_.size() - 1> c_arr;
+    if (read(pmc_id_[i], c_arr.data(), val) != val) [[unlikely]] {
+      int err = errno;
+      std::cerr << "Error reading counter " << i << std::endl;
+      std::cerr << err << ": " << strerror(err) << std::endl;
+      exit(err);
+    }
+    for (size_t i = 0; i < c_arr.size(); ++i) {
+      section_cumulatives_[section][i + 1] += c_arr[i] - base_counts_[i + 1];
+      base_counts_[i + 1] = c_arr[i];
+    }
 #else
     uint64_t c = __rdtsc();
-#endif
     section_cumulatives_[section][0] += c - base_counts_[0];
     base_counts_[0] = c;
     for (uint16_t i = 0; i < pmc_id_.size(); ++i) {
-#if defined(__aarch64__) || defined(__arm__)
-      if (read(pmc_id_[i], &c, sizeof(uint64_t)) != sizeof(uint64_t)) [[unlikely]] {
-        int err = errno;
-        std::cerr << "Error reading counter i" << std::endl;
-        std::cerr << err << ": " << strerror(err) << std::endl;
-      }
-#else
       c = __rdpmc(pmc_id_[i]);
-#endif
       section_cumulatives_[section][i + 1] += c - base_counts_[i + 1];
       base_counts_[i + 1] = c;
     }
+#endif
     if constexpr (pipeline_flush) {
       serialize();
     }
