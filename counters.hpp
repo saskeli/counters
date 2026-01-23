@@ -332,7 +332,7 @@ class Counters {
   void reset() {
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t val;
-    asm volatile("mrs %0, pmccntr_el0" : "=r"(val));
+    __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0":"=r" (val));
     base_counts_[0] = val;
 #else
     base_counts_[0] = __rdtsc();
@@ -377,7 +377,7 @@ class Counters {
     }
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t c;
-    asm volatile("mrs %0, pmccntr_el0" : "=r"(c));
+    __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0":"=r" (c));
 #else
     uint64_t c = __rdtsc();
 #endif
@@ -414,7 +414,7 @@ class Counters {
     }
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t c;
-    asm volatile("mrs %0, pmccntr_el0" : "=r"(c));
+    __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0":"=r" (cc));
 #else
     uint64_t c = __rdtsc();
 #endif
