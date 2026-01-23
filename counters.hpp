@@ -414,7 +414,7 @@ class Counters {
     }
 #if defined(__aarch64__) || defined(__arm__)
     uint64_t c;
-    __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0":"=r" (cc));
+    __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0":"=r" (c));
 #else
     uint64_t c = __rdtsc();
 #endif
