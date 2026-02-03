@@ -9,6 +9,8 @@
 #if !defined(__aarch64__) && !defined(__arm__)
 #include <immintrin.h>
 #include <x86intrin.h>
+#else
+#define PERF_SYSCALL
 #endif
 
 #include <array>
@@ -69,20 +71,24 @@ class Counters {
             bool seen_ratio, Counter C, Counter... rest>
   static constexpr bool validate_counters() {
     if constexpr (C == Counter::IPC) {
-      static_assert(has_instructions);
+      static_assert(has_instructions,
+                    "Instruction count is required to compute IPC.");
       if constexpr (sizeof...(rest) > 0) {
         return validate_counters<has_instructions, has_b_count, has_b_count,
                                  true, rest...>();
       }
     } else if constexpr (C == Counter::branch_miss_rate) {
-      static_assert(has_b_miss);
-      static_assert(has_b_count);
+      static_assert(has_b_miss,
+                    "Branch miss count is required to compute miss rate.");
+      static_assert(has_b_count,
+                    "Branch cont is required to compute miss rate.");
       if constexpr (sizeof...(rest) > 0) {
         return validate_counters<has_instructions, has_b_count, has_b_count,
                                  true, rest...>();
       }
     } else {
-      static_assert(seen_ratio == false);
+      static_assert(seen_ratio == false,
+                    "Derived (ratio) counters need to be last.");
       if constexpr (C == Counter::instructions) {
         if constexpr (sizeof...(rest) > 0) {
           return validate_counters<true, has_b_count, has_b_miss, seen_ratio,
@@ -121,13 +127,17 @@ class Counters {
   }
 
   static const constexpr uint16_t num_counters_ = count_counters<counters...>();
-  static const constexpr uint16_t num_values = sizeof...(counters) + 1;
   static const constexpr uint32_t MMAP_SIZE = 4096;
+#ifdef PERF_SYSCALL
+  std::array<perf_event_mmap_page*, num_counters_> mmaps_;
+  std::array<long, num_counters_> pmc_id_;
+#else
   std::array<perf_event_mmap_page*, num_counters_ - 1> mmaps_;
+  std::array<long, num_counters_ - 1> pmc_id_;
+#endif
   std::array<uint64_t, num_counters_> base_counts_;
   std::array<std::array<uint64_t, num_counters_>, sections>
       section_cumulatives_;
-  std::array<long, num_counters_ - 1> pmc_id_;
 
   uint32_t mmap_id(int fd, uint32_t pemmap_index) {
     int err;
@@ -214,10 +224,10 @@ class Counters {
       pe.exclude_kernel = true;
       pe.exclude_hv = true;
       pe.read_format = PERF_FORMAT_GROUP;
-#if !defined(__aarch64__) && !defined(__arm__)
-      pe.read_format |= PERF_FORMAT_ID
+#ifndef PERF_SYSCALL
+      pe.read_format |= PERF_FORMAT_ID;
 #endif
-                            pe.disabled = true;
+      pe.disabled = true;
       set_values<C>(pe);
       int fd = idx ? pmc_id_[0] : -1;
       pmc_id_[idx] = syscall(SYS_perf_event_open, &pe, 0, -1, fd, 0);
@@ -311,9 +321,28 @@ class Counters {
   /**
    * Create and start the counters defined in the template.
    */
-  Counters() : mmaps_(), base_counts_(), section_cumulatives_(), pmc_id_() {
+  Counters() : mmaps_(), pmc_id_(), base_counts_(), section_cumulatives_() {
+#ifdef PERF_SYSCALL
+    perf_event_attr pe;
+    memset(&pe, 0, sizeof(perf_event_attr));
+    pe.size = sizeof(perf_event_attr);
+    pe.exclude_kernel = true;
+    pe.exclude_hv = true;
+    pe.read_format = PERF_FORMAT_GROUP;
+    pe.disabled = true;
+    pe.type = PERF_TYPE_HARDWARE;
+    pe.config = PERF_COUNT_HW_CPU_CYCLES;
+    pmc_id_[0] = syscall(SYS_perf_event_open, &pe, 0, -1, -1, 0);
+    if (pmc_id_[0] == -1) {
+      int err = errno;
+      std::cerr << "Error creating group leader" << std::endl;
+      std::cerr << err << ": " << strerror(err) << std::endl;
+      exit(1);
+    }
+    create_counters<counters...>(1);
+#else
     create_counters<counters...>();
-
+#endif
     int err = prctl(PR_TASK_PERF_EVENTS_ENABLE);
     if (err < 0) {
       err = errno;
@@ -321,7 +350,7 @@ class Counters {
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(1);
     }
-#if !defined(__aarch64__) && !defined(__arm__)
+#ifndef PERF_SYSCALL
     for (size_t i = 0; i < pmc_id_.size(); ++i) {
       pmc_id_[i] = mmap_id(pmc_id_[i], i);
     }
@@ -333,16 +362,17 @@ class Counters {
    * Sets the zero point for the timer.
    */
   void reset() {
-#if defined(__aarch64__) || defined(__arm__)
-    uint64_t c;
-    asm volatile("mrs %0, cntvct_el0" : "=r"(c));
-    base_counts_[0] = c;
-    int64_t val = sizeof(uint64_t) * (base_counts_.size() - 1);
-    if (read(pmc_id_[0], base_counts_.data() + 1, val) != val) [[unlikely]] {
+#ifdef PERF_SYSCALL
+    std::array<uint64_t, num_counters_ + 1> t_vals;
+    if (read(pmc_id_[0], t_vals.data(), sizeof(t_vals)) != sizeof(t_vals))
+        [[unlikely]] {
       int err = errno;
       std::cerr << "Error reading counter group" << std::endl;
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(err);
+    }
+    for (uint16_t i = 0; i < base_counts_.size(); ++i) {
+      base_counts_[i] = t_vals[i + 1];
     }
 #else
     base_counts_[0] = __rdtsc();
@@ -377,22 +407,18 @@ class Counters {
     if constexpr (pipeline_flush) {
       serialize();
     }
-#if defined(__aarch64__) || defined(__arm__)
-    uint64_t c;
-    asm volatile("mrs %0, cntvct_el0" : "=r"(c));
-    section_cumulatives_[section][0] += c - base_counts_[0];
-    base_counts_[0] = c;
-    int64_t val = sizeof(uint64_t) * (base_counts_.size() - 1);
-    std::array<uint64_t, base_counts_.size() - 1> c_arr;
-    if (read(pmc_id_[0], c_arr.data(), val) != val) [[unlikely]] {
+#ifdef PERF_SYSCALL
+    std::array<uint64_t, num_counters_ + 1> c_arr;
+    if (read(pmc_id_[0], c_arr.data(), sizeof(c_arr)) != sizeof(c_arr))
+        [[unlikely]] {
       int err = errno;
       std::cerr << "Error reading counter group" << std::endl;
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(err);
     }
-    for (size_t i = 0; i < c_arr.size(); ++i) {
-      section_cumulatives_[section][i + 1] += c_arr[i] - base_counts_[i + 1];
-      base_counts_[i + 1] = c_arr[i];
+    for (size_t i = 0; i < c_arr.size() - 1; ++i) {
+      section_cumulatives_[section][i] += c_arr[i + 1] - base_counts_[i];
+      base_counts_[i] = c_arr[i + 1];
     }
 #else
     uint64_t c = __rdtsc();
@@ -420,22 +446,18 @@ class Counters {
     if constexpr (pipeline_flush) {
       serialize();
     }
-#if defined(__aarch64__) || defined(__arm__)
-    uint64_t c;
-    asm volatile("mrs %0, cntvct_el0" : "=r"(c));
-    section_cumulatives_[section][0] += c - base_counts_[0];
-    base_counts_[0] = c;
-    int64_t val = sizeof(uint64_t) * (base_counts_.size() - 1);
-    std::array<uint64_t, base_counts_.size() - 1> c_arr;
-    if (read(pmc_id_[0], c_arr.data(), val) != val) [[unlikely]] {
+#ifdef PERF_SYSCALL
+    std::array<uint64_t, num_counters_ + 1> c_arr;
+    if (read(pmc_id_[0], c_arr.data(), sizeof(c_arr)) != sizeof(c_arr))
+        [[unlikely]] {
       int err = errno;
       std::cerr << "Error reading counter group" << std::endl;
       std::cerr << err << ": " << strerror(err) << std::endl;
       exit(err);
     }
-    for (size_t i = 0; i < c_arr.size(); ++i) {
-      section_cumulatives_[section][i + 1] += c_arr[i] - base_counts_[i + 1];
-      base_counts_[i + 1] = c_arr[i];
+    for (size_t i = 0; i < c_arr.size() - 1; ++i) {
+      section_cumulatives_[section][i] += c_arr[i + 1] - base_counts_[i];
+      base_counts_[i] = c_arr[i + 1];
     }
 #else
     uint64_t c = __rdtsc();
