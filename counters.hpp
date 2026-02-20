@@ -33,6 +33,8 @@ enum Counter {
   instructions, /**! Number of retired instructions */
   branch_miss,  /**! Number of branch misspredictions */
   branches,     /**! Number of retired branch instructions */
+  frontend_stall_cycles, /**! Number of cycles stalled at frontend */
+  backend_stall_cycles, /**! Number of cycles stalled at backedn */
   L1D_access,   /**! Number of Level 1 data cache accesses */
   L1D_miss,     /**! Number of Level 1 data cache misses */
   L1I_access,   /**! Number of Level 1 instruction cache accesses */
@@ -174,6 +176,12 @@ class Counters {
     } else if constexpr (C == Counter::branches) {
       pe.type = PERF_TYPE_HARDWARE;
       pe.config = PERF_COUNT_HW_BRANCH_INSTRUCTIONS;
+    } else if constexpr (C == Counter::frontend_stall_cycles) {
+      pe.type = PERF_TYPE_HARDWARE;
+      pe.config = PERF_COUNT_HW_STALLED_CYCLES_FRONTEND;
+    } else if constexpr (C == Counter::backend_stall_cycles) {
+      pe.type = PERF_TYPE_HARDWARE;
+      pe.config = PERF_COUNT_HW_STALLED_CYCLES_BACKEND;
     } else if constexpr (C == Counter::L1D_access) {
       pe.type = PERF_TYPE_HW_CACHE;
       pe.config = PERF_COUNT_HW_CACHE_L1D | (PERF_COUNT_HW_CACHE_OP_READ << 8) |
@@ -272,6 +280,10 @@ class Counters {
       } else if constexpr (c == Counter::branches) {
         branch_count = val;
         out << "Branch instructions:\t";
+      } else if constexpr (c == Counter::frontend_stall_cycles) {
+        out << "Stalled cycles frontend:\t";
+      } else if constexpr (c == Counter::backend_stall_cycles) {
+        out << "Stalled cycles backend:\t";
       } else if constexpr (c == Counter::L1D_access) {
         out << "L1D hits:\t";
       } else if constexpr (c == Counter::L1D_miss) {
