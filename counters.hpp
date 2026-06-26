@@ -27,24 +27,24 @@ namespace count {
  *
  * Counter that are ratios of other counters need to be last.
  *
- * No separate Cycle couter is available, as RTC will allways be used.
+ * No separate Cycle counter is available, as RTC will always be used.
  */
 enum Counter {
   instructions, /**! Number of retired instructions */
   branch_miss,  /**! Number of branch misspredictions */
   branches,     /**! Number of retired branch instructions */
   frontend_stall_cycles, /**! Number of cycles stalled at frontend */
-  backend_stall_cycles, /**! Number of cycles stalled at backedn */
+  backend_stall_cycles, /**! Number of cycles stalled at backend */
   L1D_access,   /**! Number of Level 1 data cache accesses */
   L1D_miss,     /**! Number of Level 1 data cache misses */
   L1I_access,   /**! Number of Level 1 instruction cache accesses */
-  L1I_miss,     /**! Number of Level 1 instructino cache misses */
+  L1I_miss,     /**! Number of Level 1 instruction cache misses */
   DTLB_miss,    /**! Number of Data TLB misses */
   ITLB_miss,    /**! Number of Instruction TLB misses */
   LL_access,    /**! Number of Last Level cache accesses */
   LL_miss,      /**! Number of Last Level cache misses */
   IPC,          /**! Ratio of retired instructions / elapsed time. Requires the
-                   `instructions` counter. Needs to be efter any actual counters. */
+                   `instructions` counter. Needs to be after any actual counters. */
   branch_miss_rate, /**! `branch_miss / branches`. Requires both of these
                        counters, and needs to be after any actual counters. */
 };
@@ -52,17 +52,17 @@ enum Counter {
 /**
  * Low overhead access to performance counters.
  *
- * Reading perofrmance counters should not require context switching and should
+ * Reading performance counters should not require context switching and should
  * have a minimal memory / cycle footprint.
  *
- * Templata parameter `sections` enables simultaniously collection information
+ * Template parameter `sections` enables simultaneously collection information
  * on multiple sections of code.
  *
  * The fewer counters are defined, the lower the impact of doing the counting on
  * the thing that is counted.
  *
- * The ratio counters `IPC` and `branch_miss_rate` require other conuters to be
- * defined, and need to be last on the list of conters.
+ * The ratio counters `IPC` and `branch_miss_rate` require other counters to be
+ * defined, and need to be last on the list of counters.
  *
  * @tparam sections  Number of instances of each counter.
  * @tparam counters  Parameter pack definition of all counters used.
@@ -217,7 +217,7 @@ class Counters {
       pe.config = PERF_COUNT_HW_CACHE_LL | (PERF_COUNT_HW_CACHE_OP_READ << 8) |
                   (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
     } else {
-      static_assert(false, "Invalid peformance counter");
+      static_assert(false, "Invalid performance counter");
     }
   }
 
@@ -301,7 +301,7 @@ class Counters {
       } else if constexpr (c == Counter::LL_miss) {
         out << "LL misses:\t";
       } else {
-        static_assert(false, "Invalid peformance counter");
+        static_assert(false, "Invalid performance counter");
       }
       if (div > 1) {
         v = val;
@@ -487,7 +487,7 @@ class Counters {
   }
 
   /**
-   * Get acumulated counter data as an array reference.
+   * Get accumulated counter data as an array reference.
    *
    * You probably don't want to do this...
    */
@@ -502,7 +502,7 @@ class Counters {
    * number of runs.
    *
    * @param section  Section to output counters for.
-   * @param div      Divisor to devide non-ratio timers.
+   * @param div      Divisor to divide non-ratio timers.
    * @param o_stream Stream to output perf results.
    */
   void output_counters(uint16_t section, size_t div = 1,
